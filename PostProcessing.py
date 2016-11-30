@@ -10,6 +10,7 @@ import seaborn as sns
 import os
 from scipy.interpolate import griddata
 from datetime import datetime
+from datetime import timedelta
 from dateutil import parser
 
 
@@ -34,7 +35,7 @@ class PostProcess:
 		self.path_to_ens = "Ensembles/" + self.dt_folder
 		self.DS=[]
 		self.Obs_set=[]
-		self.tmp_obs = "TMP_2maboveground"
+		self.tmp_obs = "TMP_surface"
 		self.ens_timeindex=0
 		self.obs_timeindex=0
 		self.obs_precision = obs_precision
@@ -51,7 +52,7 @@ class PostProcess:
 			self.DS.append(xr.open_dataset(filepath))
 
 		for i in range(number_of_obs):
-			gfsfile = "gfs_" +self.dt.strftime('%Y-%m-%d') + "_" + (str((i*6)).zfill(2)) + "_final"
+			gfsfile = "fin_gfs_" + (str((i*6)).zfill(2))
 			gfs_path = os.path.join(self.path_to_ens,gfsfile)
 			print gfs_path
 			self.Obs_set.append(xr.open_dataset(gfs_path))
@@ -204,22 +205,68 @@ class PostProcess:
 		return PostProcessDict
 
 
-
 		
+
+def Run_PostProcess(startdate,n_of_days):
+	date_list = []
+	date_list.append(startdate)
+	for day in range(n_of_days):
+		start = parser.parse(startdate)
+		newday = (start + timedelta(days = day)).strftime('%Y-%m-%d')
+		date_list.append(newday)
+	PProcess_Array=[]
+	for date in date_list:
+		A = PostProcess(date,4,4,4,["00h","06h","12h","18h"],[3,6])
+		PProcess_Array.append(A)
+	Results_Array =[]
+	for item in PProcess_Array:
+		Results_Array.append(item.PostProcess())
+	return Results_Array
+
+	
+def avg_err(hours,mat):
+    count = 0
+    summat= 0
+    for item in mat:
+        for i in range(4):
+            summat=summat+ item[hours][0][i]
+            count = count+1
+    return summat/count
+
+def std_error(hours, mat):
+	emptymat = np.zeros(shape(mat[0][hours][0][1]),dtype=object)
+	for i, one in enumerate(emptymat):
+		for j,two in enumerate(one):
+			emptymat[i,j]= []
+	for i, lat in enumerate(mat[0][hours][0][1]):
+		for j, lon in enumerate(lat):
+			emptymat[i,j].append(float(lon))
+	for day in mat:
+		for i in day[hours][0]:
+			for j,lat in enumerate(i):
+				for k,lon in enumerate(lat):
+					emptymat[j,k].append(float(lon))
+	std_err_mat = np.zeros(shape(mat[0][hours][0][1]),dtype=object)
+	get_std = lambda x,y: np.std(emptymat[x,y])
+	for i, one in enumerate(std_err_mat):
+		for j,two in enumerate(std_err_mat):
+			std_err_mat[i,j] = get_std(i,j)
+
+	return emptymat, std_err_mat
+
+
+
+
+
+
+
 
 
 			
 
 
-Nov8 = PostProcess("11-08-2016",4,4,4,["00h","06h","12h","18h"],[3,6])
 
-
-
-
-
-
-
-
+Nov20 = PostProcess("11-20-2016",4,4,4,["00h","06h","12h","18h"],[3,6])
 
 
 
